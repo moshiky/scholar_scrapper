@@ -5,6 +5,7 @@ from csv_manager import CsvManager
 from job_manager import JobManager
 from html_profile_scrapper import HtmlProfileScrapper
 from logger import Logger
+from consts import Consts
 
 
 THREAD_POOL_SIZE = 10
@@ -21,7 +22,7 @@ def scrapper_worker(arguments):
     while tries < MAX_TRIES:
         while job_manager.has_jobs():
             tries = 0
-            job = job_manager.get_next().split('$$$')
+            job = job_manager.get_next().split(Consts.JOB_INFO_SEPARATOR)
             author_name = job[0]
             user_id = job[1]
             HtmlProfileScrapper.add_info(logger, author_name, user_id, csv_manager, job_manager)
@@ -39,9 +40,11 @@ def main():
     job_manager = JobManager(logger)
 
     # add first job
-    author_name = r'Matthew E. Taylor'
     job_manager.add(
-        r'{author_name}$$$edQgLXcAAAAJ'.format(author_name=author_name)
+        r'{author_name}{job_info_separator}{user_id}'.format(
+            author_name=Consts.FIRST_USER['name'], job_info_separator=Consts.JOB_INFO_SEPARATOR,
+            user_id=Consts.FIRST_USER['user_id']
+        )
     )
 
     # test html parser

@@ -1,6 +1,11 @@
 
 class Consts:
 
+    FIRST_USER = {
+        'name': 'Matthew E. Taylor',
+        'user_id': 'edQgLXcAAAAJ'
+    }
+
     VALID_DOMAINS = [
         'artificial intelligence',
         'intelligent agents',
@@ -18,3 +23,7 @@ class Consts:
         'Computer Graphics',
         'Data Analysis'
     ]
+
+    BASE_ADDRESS = r'http://scholar.google.co.il/citations?user='
+
+    JOB_INFO_SEPARATOR = '$$$'

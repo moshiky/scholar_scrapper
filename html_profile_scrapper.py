@@ -1,6 +1,7 @@
 
 import requests
 from lxml import html
+from consts import Consts
 
 
 class HtmlProfileScrapper:
@@ -10,7 +11,7 @@ class HtmlProfileScrapper:
         logger.log('parsing {author_name} profile..'.format(author_name=author_name))
 
         # download page
-        page_url = r'http://scholar.google.co.il/citations?user=' + user_id
+        page_url = Consts.BASE_ADDRESS + user_id
         with requests.get(page_url) as page:
             page_content = page.content
 
@@ -27,8 +28,9 @@ class HtmlProfileScrapper:
         if co_author_list is not None:
             for co_author_name in co_author_list.keys():
                 job_manager.add(
-                    '{co_author_name}$$${page_url}'.format(
-                        co_author_name=co_author_name, page_url=co_author_list[co_author_name]
+                    '{co_author_name}{job_info_separator}{user_id}'.format(
+                        co_author_name=co_author_name, job_info_separator=Consts.JOB_INFO_SEPARATOR,
+                        user_id=co_author_list[co_author_name]
                     )
                 )
 
@@ -92,7 +94,7 @@ class HtmlProfileScrapper:
                     author_name = node.text
                     # extract author profile page url
                     profile_url = node.get('href')
-                    # add info to co-author list
+                    # add user id to co-author list
                     co_authors[author_name] = profile_url.split(r'citations?user=')[1]
                     break
 
