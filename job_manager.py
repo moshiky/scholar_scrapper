@@ -4,13 +4,15 @@ import threading
 
 class JobManager:
 
-    def __init__(self):
+    def __init__(self, logger):
+        self.__logger = logger
         self.__queue = list()
         self.__history = list()
         self.__data_lock = threading.Lock()
 
     def has_jobs(self):
-        print('jobs: {size}'.format(size=len(self.__queue)))
+        self.__logger.log('waiting jobs: {jobs_size}, passed: {history_size}'
+                          .format(jobs_size=len(self.__queue), history_size=len(self.__history)))
         return len(self.__queue) > 0
 
     def add(self, item):
