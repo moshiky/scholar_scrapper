@@ -23,8 +23,8 @@ def scrapper_worker(arguments):
             tries = 0
             job = job_manager.get_next().split('$$$')
             author_name = job[0]
-            page_url = job[1]
-            HtmlProfileScrapper.add_info(logger, author_name, page_url, csv_manager, job_manager)
+            user_id = job[1]
+            HtmlProfileScrapper.add_info(logger, author_name, user_id, csv_manager, job_manager)
         logger.log('no more jobs, waiting and checking again..')
         time.sleep(TRY_WAIT_INTERVAL)
         tries += 1
@@ -41,7 +41,7 @@ def main():
     # add first job
     author_name = r'Matthew E. Taylor'
     job_manager.add(
-        r'{author_name}$$$https://scholar.google.com/citations?user=edQgLXcAAAAJ'.format(author_name=author_name)
+        r'{author_name}$$$edQgLXcAAAAJ'.format(author_name=author_name)
     )
 
     # test html parser

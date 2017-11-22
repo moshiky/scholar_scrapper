@@ -1,21 +1,21 @@
 
 import requests
 from lxml import html
-import os
 
 
 class HtmlProfileScrapper:
 
     @staticmethod
-    def add_info(logger, author_name, profile_page_url, record_manager, job_manager):
+    def add_info(logger, author_name, user_id, record_manager, job_manager):
         logger.log('parsing {author_name} profile..'.format(author_name=author_name))
 
         # download page
-        with requests.get(profile_page_url) as page:
+        page_url = r'http://scholar.google.co.il/citations?user=' + user_id
+        with requests.get(page_url) as page:
             page_content = page.content
 
         # parse html
-        tree = html.fromstring(page.content)
+        tree = html.fromstring(page_content)
 
         # handle citation history
         citation_history = HtmlProfileScrapper.get_citation_history(logger, tree)
@@ -93,7 +93,7 @@ class HtmlProfileScrapper:
                     # extract author profile page url
                     profile_url = node.get('href')
                     # add info to co-author list
-                    co_authors[author_name] = os.path.join(r'https://scholar.google.com/', profile_url[1:])
+                    co_authors[author_name] = profile_url.split(r'citations?user=')[1]
                     break
 
         # return list
