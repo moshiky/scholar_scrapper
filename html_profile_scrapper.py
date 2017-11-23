@@ -1,4 +1,5 @@
 
+import sys
 import requests
 from lxml import html
 from consts import Consts
@@ -13,15 +14,24 @@ class HtmlProfileScrapper:
         # download page
         page_url = Consts.BASE_ADDRESS + user_id
         with requests.get(page_url) as page:
+            if page.status_code != 200:
+                logger.error('got error code: {err_no}'.format(err_no=page.status_code))
+                sys.exit(1)
             page_content = page.content
 
         # parse html
         tree = html.fromstring(page_content)
 
+        # extract research field
+        research_field = str(HtmlProfileScrapper.get_research_field(logger, tree))
+
         # handle citation history
         citation_history = HtmlProfileScrapper.get_citation_history(logger, tree)
-        if citation_history is not None:
-            record_manager.add(author_name, citation_history)
+
+        if citation_history is not None:    # and \
+                # min(int(year_key) for year_key in citation_history.keys()) >= Consts.EARLIEST_CITATION_YEAR:
+            # ignore authors that hers first citations is to early
+            record_manager.add(author_name, research_field, citation_history)
 
         # handle co-authors
         co_author_list = HtmlProfileScrapper.get_co_author_list(logger, tree)
@@ -35,9 +45,26 @@ class HtmlProfileScrapper:
                 )
 
     @staticmethod
+    def get_research_field(logger, html_tree_root):
+        container_class = r'gsc_prf_inta gs_ibl'
+
+        # find research fields container tag
+        fields = html_tree_root.xpath('//a[@class="{class_name}"]/text()'.format(class_name=container_class))
+        if not fields:
+            logger.error('can\'t find fields..')
+            return False
+
+        # check for CS related research fields
+        lower_case_field_list = [x.lower() for x in Consts.VALID_FIELDS]
+        for field_name in fields:
+            if field_name.lower() in lower_case_field_list:
+                return True
+        return False
+
+    @staticmethod
     def get_citation_history(logger, html_tree_root):
         year_tag_class_name = r'gsc_g_t'
-        counter_tag_class_name = r'gsc_g_a'
+        counter_tag_class_name = r'gsc_g_al'
 
         # find years
         years = html_tree_root.xpath('//span[@class="{class_name}"]/text()'.format(class_name=year_tag_class_name))
@@ -45,28 +72,22 @@ class HtmlProfileScrapper:
             logger.error('can\'t find years..')
             return None
 
-        # find citation counter tags
-        counter_tags = html_tree_root.xpath('//a[@class="{class_name}"]'.format(class_name=counter_tag_class_name))
-        if not counter_tags:
+        # find counter tags
+        counters = html_tree_root.xpath('//span[@class="{class_name}"]/text()'.format(class_name=counter_tag_class_name))
+        if not counters:
             logger.error('can\'t find counters..')
             return None
-        elif len(years) != len(counter_tags):
+        elif len(years) != len(counters):
             logger.error('different number of years and counters')
             return None
 
         # build list of all counters
-        counters = list()
-        for outer_tag in counter_tags:
-            child_nodes = outer_tag.getchildren()
-            if len(child_nodes) != 1:
-                logger.error('missing counter tag child node / too many nodes')
-                return None
-            counters.append(int(child_nodes[0].text))
+        int_counters = [int(x) for x in counters]
 
         # join years with counters
         year_counter = dict()
         for i in range(len(years)):
-            year_counter[years[i]] = counters[i]
+            year_counter[years[i]] = int_counters[i]
 
         return year_counter
 
