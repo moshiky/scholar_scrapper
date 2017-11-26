@@ -13,19 +13,29 @@ class CsvManager:
         self.__max_year = time.localtime().tm_year
         self.__year_index = [str(x) for x in range(self.__min_year, self.__max_year+1, 1)]
 
-        # set file name
-        self.__file_name = \
-            os.path.join(r'results', r'records__{timestamp}.csv'.format(timestamp=time.strftime('%d_%m_%Y__%H_%M_%S')))
+        # set file names
+        timestamp_string = time.strftime('%d_%m_%Y__%H_%M_%S')
+        self.__citations_file_name = \
+            os.path.join(r'results', r'citations__{timestamp}.csv'.format(timestamp=timestamp_string))
+        self.__publications_file_name = \
+            os.path.join(r'results', r'publications__{timestamp}.csv'.format(timestamp=timestamp_string))
 
         # initiate file
-        self.__create_file()
+        self.__create_files()
         self.__add_lock = threading.Lock()
         # todo: parse csv and load stored authors list
 
-    def __create_file(self):
+    def __create_files(self):
         record_row = ['author_name', 'research_field'] + self.__year_index
-        with open(self.__file_name, 'wt', newline='') as results_csv_file:
-            writer = csv.writer(results_csv_file)
+
+        # create citations file
+        with open(self.__citations_file_name, 'wt', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow(record_row)
+
+        # create publications file
+        with open(self.__publications_file_name, 'wt', newline='') as csv_file:
+            writer = csv.writer(csv_file)
             writer.writerow(record_row)
 
     def __format_history(self, history_to_pad):
@@ -37,11 +47,24 @@ class CsvManager:
 
         return [x[1] for x in sorted(padded_history.items())]
 
-    def add(self, author_name, research_field_type, citation_history):
-        record_row = [author_name, research_field_type] + self.__format_history(citation_history)
+    def add(self, author_name, research_field_type, citation_history, publication_history):
+
         with self.__add_lock:
-            with open(self.__file_name, 'at', newline='') as results_csv_file:
-                writer = csv.writer(results_csv_file)
+
+            # add citation history record
+            record_row = [author_name, research_field_type] + self.__format_history(citation_history)
+            with open(self.__citations_file_name, 'at', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                try:
+                    writer.writerow(record_row)
+                except Exception as ex:
+                    record_row[0] = '<invalid name>'
+                    writer.writerow(record_row)
+
+            # add publication history record
+            record_row = [author_name, research_field_type] + self.__format_history(publication_history)
+            with open(self.__publications_file_name, 'at', newline='') as csv_file:
+                writer = csv.writer(csv_file)
                 try:
                     writer.writerow(record_row)
                 except Exception as ex:

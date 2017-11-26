@@ -33,3 +33,5 @@ class Consts:
     THREAD_POOL_SIZE = 2
     MAX_TRIES = 3
     TRY_WAIT_INTERVAL = 5
+
+    BUFFERING_STEP_SIZE = 100

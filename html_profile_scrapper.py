@@ -2,6 +2,7 @@
 import sys
 import requests
 from lxml import html
+from collections import Counter
 from consts import Consts
 
 
@@ -9,15 +10,10 @@ class HtmlProfileScrapper:
 
     @staticmethod
     def add_info(logger, author_name, user_id, record_manager, job_manager):
-        logger.log('parsing {author_name} profile..'.format(author_name=author_name))
+        logger.log('parsing {author_name} [{user_id}] profile..'.format(author_name=author_name, user_id=user_id))
 
-        # download page
-        page_url = Consts.BASE_ADDRESS + user_id
-        with requests.get(page_url) as page:
-            if page.status_code != 200:
-                logger.error('got error code: {err_no}'.format(err_no=page.status_code))
-                sys.exit(1)
-            page_content = page.content
+        # get page content
+        page_content = HtmlProfileScrapper.get_page_content(logger, user_id, 0)
 
         # parse html
         tree = html.fromstring(page_content)
@@ -28,10 +24,12 @@ class HtmlProfileScrapper:
         # handle citation history
         citation_history = HtmlProfileScrapper.get_citation_history(logger, tree)
 
-        if citation_history is not None:    # and \
-                # min(int(year_key) for year_key in citation_history.keys()) >= Consts.EARLIEST_CITATION_YEAR:
-            # ignore authors that hers first citations is to early
-            record_manager.add(author_name, research_field, citation_history)
+        # handle publications
+        publication_history = Counter(HtmlProfileScrapper.get_publication_history(logger, user_id, tree))
+
+        if citation_history is not None and len(citation_history) > 0 and \
+                publication_history is not None and len(publication_history) > 0:
+            record_manager.add(user_id, research_field, citation_history, publication_history)
 
         # handle co-authors
         co_author_list = HtmlProfileScrapper.get_co_author_list(logger, tree)
@@ -43,6 +41,22 @@ class HtmlProfileScrapper:
                         user_id=co_author_list[co_author_name]
                     )
                 )
+
+    @staticmethod
+    def get_page_content(logger, user_id, buffer_start_point):
+        # build page url
+        page_url = \
+            Consts.BASE_ADDRESS \
+            + user_id \
+            + r'&cstart={start_point}&pagesize={step_size}'.format(
+                start_point=buffer_start_point, step_size=Consts.BUFFERING_STEP_SIZE)
+
+        # download page
+        with requests.get(page_url) as page:
+            if page.status_code != 200:
+                logger.error('got error code: {err_no}'.format(err_no=page.status_code))
+                sys.exit(1)
+            return page.content
 
     @staticmethod
     def get_research_field(logger, html_tree_root):
@@ -92,6 +106,37 @@ class HtmlProfileScrapper:
         return year_counter
 
     @staticmethod
+    def get_publication_history(logger, user_id, html_tree_root):
+        # initiate result list
+        publication_years = list()
+
+        # initiate buffering index
+        buffering_index = Consts.BUFFERING_STEP_SIZE
+
+        while html_tree_root is not None:
+            # extract publications from tree
+            publication_year_tag_class = 'gsc_a_h gsc_a_hc gs_ibl'
+
+            # find publication years
+            publication_years_in_page = \
+                html_tree_root.xpath('//span[@class="{class_name}"]/text()'.format(class_name=publication_year_tag_class))
+            if not publication_years_in_page:
+                break
+
+            # store in result list
+            publication_years += publication_years_in_page
+
+            # download next publication records page
+            page_content = HtmlProfileScrapper.get_page_content(logger, user_id, buffering_index)
+            buffering_index += Consts.BUFFERING_STEP_SIZE
+
+            # parse html
+            html_tree_root = html.fromstring(page_content)
+
+        # return result list
+        return publication_years
+
+    @staticmethod
     def get_co_author_list(logger, html_tree_root):
         container_tag_name = r'gsc_rsb_a_desc'
         co_authors = dict()
@@ -117,6 +162,9 @@ class HtmlProfileScrapper:
                     profile_url = node.get('href')
                     # add user id to co-author list
                     co_authors[author_name] = profile_url.split(r'citations?user=')[1]
+                    # remove extra parameters
+                    if co_authors[author_name].count('&') > 0:
+                        co_authors[author_name] = co_authors[author_name].split('&')[0]
                     break
 
         # return list
