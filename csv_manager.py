@@ -9,9 +9,7 @@ from consts import Consts
 class CsvManager:
 
     def __init__(self):
-        self.__min_year = 1970  # Consts.EARLIEST_CITATION_YEAR
-        self.__max_year = time.localtime().tm_year
-        self.__year_index = [str(x) for x in range(self.__min_year, self.__max_year+1, 1)]
+        self.__year_index = Consts.YEAR_INDEX
 
         # set file names
         timestamp_string = time.strftime('%d_%m_%Y__%H_%M_%S')

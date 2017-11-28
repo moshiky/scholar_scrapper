@@ -1,4 +1,7 @@
 
+import time
+
+
 class Consts:
 
     FIRST_USER = {
@@ -35,3 +38,7 @@ class Consts:
     TRY_WAIT_INTERVAL = 5
 
     BUFFERING_STEP_SIZE = 100
+
+    FIRST_YEAR = 1970
+    CURRENT_YEAR = time.localtime().tm_year
+    YEAR_INDEX = [str(x) for x in range(FIRST_YEAR, CURRENT_YEAR+1, 1)]
