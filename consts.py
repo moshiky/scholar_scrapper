@@ -39,6 +39,11 @@ class Consts:
 
     BUFFERING_STEP_SIZE = 100
 
+    FILE_CHECK_INTERVAL = 60
+
     FIRST_YEAR = 1970
     CURRENT_YEAR = time.localtime().tm_year
     YEAR_INDEX = [str(x) for x in range(FIRST_YEAR, CURRENT_YEAR+1, 1)]
+
+    CONNECTION_ERROR_INTERVAL = 10
+    CONNECTION_ERROR_TRIES = 5

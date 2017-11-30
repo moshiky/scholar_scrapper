@@ -9,7 +9,29 @@ class Analyzer:
     def __init__(self, logger):
         self.__logger = logger
 
-    def parse_records_file(self, file_path):
+    def align_careers(self, file_path):
+        users_info = self.parse_records_file(file_path, only_our=True)
+        no_zeros_dict = dict()
+        for user_id in users_info.keys():
+            current_index = 0
+            while users_info[user_id][current_index] == 0:
+                current_index += 1
+            no_zeros_dict[user_id] = users_info[user_id][current_index:]
+
+        # store to output file
+        csv_rows = [[user_id] + no_zeros_dict[user_id] for user_id in no_zeros_dict.keys()]
+        with open(r'results/no_zeros__{file_name}'.format(
+                file_name=file_path[
+                            len(file_path) - file_path[::-1].find(r'/') if file_path.find(r'/') > -1
+                            else len(file_path) - file_path[::-1].find('\\') if file_path.find('\\') > -1
+                            else 0
+                            :
+                          ]
+        ), 'wt', newline='') as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerows(csv_rows)
+
+    def parse_records_file(self, file_path, only_our=True):
         # read file
         with open(file_path, 'rt') as file_handle:
             reader = csv.reader(file_handle)
@@ -19,7 +41,7 @@ class Analyzer:
         # dict[<user_id>] = [<year_0_counter>, <year_1_counter>, ...]
         user_info = dict()
         for line in file_lines[1:]:
-            if line[1] == 'True':   # is form our research field
+            if not only_our or line[1] == 'True':   # is form our research field
                 user_info[line[0]] = [int(x) for x in line[2:]]
 
         return user_info
@@ -79,6 +101,7 @@ class Analyzer:
 if __name__ == '__main__':
     analyzer = Analyzer(None)
     print('start analyze..')
-    analyzer.calculate_total_publications_over_time(sys.argv[2])
-    analyzer.calculate_citations_per_publications_over_time(sys.argv[1], sys.argv[2])
+    # analyzer.calculate_total_publications_over_time(sys.argv[2])
+    # analyzer.calculate_citations_per_publications_over_time(sys.argv[1], sys.argv[2])
+    analyzer.align_careers(sys.argv[1])
     print('done')
