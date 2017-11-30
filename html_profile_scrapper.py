@@ -1,5 +1,7 @@
 
+import os
 import sys
+import time
 import requests
 from lxml import html
 from collections import Counter
@@ -42,6 +44,12 @@ class HtmlProfileScrapper:
                     )
                 )
 
+    @ staticmethod
+    def wait_for_file_creation(logger):
+        while not os.path.exists('go.txt'):
+            logger.log('wait for connectivity..')
+            time.sleep(Consts.FILE_CHECK_INTERVAL)
+
     @staticmethod
     def get_page_content(logger, user_id, buffer_start_point):
         # build page url
@@ -52,11 +60,23 @@ class HtmlProfileScrapper:
                 start_point=buffer_start_point, step_size=Consts.BUFFERING_STEP_SIZE)
 
         # download page
-        with requests.get(page_url) as page:
-            if page.status_code != 200:
-                logger.error('got error code: {err_no}'.format(err_no=page.status_code))
-                sys.exit(1)
-            return page.content
+        tries = 0
+        while tries < Consts.CONNECTION_ERROR_TRIES:
+            try:
+                with requests.get(page_url) as page:
+                    if page.status_code != 200:
+                        logger.error('got error code: {err_no}'.format(err_no=page.status_code))
+                        HtmlProfileScrapper.wait_for_file_creation(logger)
+
+                    return page.content
+
+            except Exception as ex:
+                logger.error('failed to download page: {err}'.format(err=ex))
+                tries += 1
+                time.sleep(Consts.CONNECTION_ERROR_INTERVAL)
+
+        logger.error('continuous connection error, exiting')
+        sys.exit(1)
 
     @staticmethod
     def get_research_field(logger, html_tree_root):
